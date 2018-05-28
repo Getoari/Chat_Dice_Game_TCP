@@ -51,68 +51,76 @@ public class Client extends JFrame {
 		
 		try {
 			msgSocket = new Socket("localhost",8888);
-			Thread.sleep(3000);
+			voiceSocket = new Socket("localhost",8889);
 			
-			while(true)
-			{
-
-				voiceSocket = new Socket("localhost",8889);
-									
-				String msgin="";
-				din = new DataInputStream(msgSocket.getInputStream());
-				dout = new DataOutputStream(msgSocket.getOutputStream());
+			// Message Receiver Thread
+			Thread t1 = new Thread(new Runnable() {
 				
-				try {
-					msgin=din.readUTF();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				
-				msg_text.setText(msg_text.getText().trim()+"\nServer:\t"+msgin);	
-				
-
-				if(voiceSocket.isConnected()) {
-					Thread t1 = new Thread(new Runnable() {
+				@Override
+				public void run() {
+					while (true) {
+						String msgin="";
+						try {
+							din = new DataInputStream(msgSocket.getInputStream());
+							dout = new DataOutputStream(msgSocket.getOutputStream());
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
 						
-						@Override
-						public void run() {
-							InputStream is = null;
-							try {
-								is = voiceSocket.getInputStream();
-							} catch (IOException e1) {
-								is = null;
-							}
-					        
-					        byte[] aByte = new byte[1];
-					        int bytesRead;
-
-					        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-					        if (is != null) {
-
-					            FileOutputStream fos = null;
-					            BufferedOutputStream bos = null;
-					            try {
-					                fos = new FileOutputStream("E:/audio.wav");
-					                bos = new BufferedOutputStream(fos);
-					                bytesRead = is.read(aByte, 0, aByte.length);
-
-					                do {
-				                        baos.write(aByte);
-				                        bytesRead = is.read(aByte);
-					                } while (bytesRead != -1);
-
-					                bos.write(baos.toByteArray());
-					                bos.flush();
-					                bos.close();
-					                is.close();
-					                voiceSocket.close();
-					            } catch (IOException ex) {
-					                // Do exception handling
-					            }
-					        }
-					        
-					        File yourFile;
+						try {
+							msgin=din.readUTF();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						
+						msg_text.append("Server:\t"+msgin+"\n");
+					}
+				}
+			});
+			
+			t1.start();
+			
+			// Voice Receiver
+			while(true)
+			{		
+				
+					if(!voiceSocket.isClosed()) {
+						InputStream is = null;
+						try {
+							is = voiceSocket.getInputStream();
+						} catch (IOException e1) {
+							is = null;
+						}
+				        
+				        byte[] aByte = new byte[1];
+				        int bytesRead;
+	
+				        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+	
+				        if (is != null) {
+	
+				            FileOutputStream fos = null;
+				            BufferedOutputStream bos = null;
+				            try {
+				                fos = new FileOutputStream("E:/audio.wav");
+				                bos = new BufferedOutputStream(fos);
+				                bytesRead = is.read(aByte, 0, aByte.length);
+	
+				                do {
+			                        baos.write(aByte);
+			                        bytesRead = is.read(aByte);
+				                } while (bytesRead != -1);
+	
+				                bos.write(baos.toByteArray());
+				                bos.flush();
+				                bos.close();
+				                is.close();
+				            } catch (IOException ex) {
+				                // Do exception handling
+				            }
+				            
+				            File yourFile;
 					        AudioInputStream stream = null;
 					        AudioFormat format;
 					        DataLine.Info info;
@@ -138,15 +146,20 @@ public class Client extends JFrame {
 								e.printStackTrace();
 							}
 					        clip.start();
+					        msg_text.append("Server: Voice Message! \n");
+					        
+					        try {
+								voiceSocket = new Socket("localhost",8889);
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+				        }
+					}
 					       
-						}
-					});
-					t1.start();
-					
 				}
 				
-			}
-			
+	
 			
 			
 			
@@ -202,4 +215,3 @@ public class Client extends JFrame {
 		
 	}
 }
-

@@ -22,6 +22,7 @@ import java.awt.event.ActionEvent;
 import java.awt.Color;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import javax.swing.JLabel;
 
 public class Server extends JFrame {
 
@@ -67,14 +68,13 @@ public class Server extends JFrame {
 		while(true) {
 			
 			msgSocket = null;
-			voiceSocket = null;
 			
 			try
 	        {
 	            // socket object to receive incoming client requests
 				msgSocket = msgServerSocket.accept();
 	            
-				msg_text.append("A new client is connected: " + msgSocket);
+				msg_text.append("A new client is connected: " + msgSocket + "\n");
 	             
 	            // obtaining input and out streams
 	            dis = new DataInputStream(msgSocket.getInputStream());
@@ -91,7 +91,7 @@ public class Server extends JFrame {
 							String msgin = "";
 							while(!msgin.equals("exit")) {
 								msgin=dis.readUTF();
-								msg_text.setText(msg_text.getText().trim()+"\nKlient:\t"+ msgin);																		
+								msg_text.append("Klient:\t"+ msgin+"\n");																		
 							}
 						
 						} catch (IOException e) {
@@ -118,7 +118,7 @@ public class Server extends JFrame {
 	public Server() {
 		setTitle("Server");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 450, 300);
+		setBounds(100, 100, 450, 301);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
@@ -137,51 +137,57 @@ public class Server extends JFrame {
 				targetDataLine.stop();
 				targetDataLine.close();
 				
-				//Send recording
-				try {
-					voiceSocket = voiceServerSocket.accept();
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
+				//Send recording				
+				Thread t1 = new Thread(new Runnable() {
 					
-				try {
-					
-		            BufferedOutputStream outToClient = null;
-		            outToClient = new BufferedOutputStream(voiceSocket.getOutputStream());
-		            
-		            if (outToClient != null) {
-		                File myFile = new File("audio.wav");
-		                byte[] mybytearray = new byte[(int) myFile.length()];
+					@Override
+					public void run() {
+						// TODO Auto-generated method stub
+						try {
+							
+				            BufferedOutputStream outToClient = null;
+				            outToClient = new BufferedOutputStream(voiceSocket.getOutputStream());
+				            
+				            if (outToClient != null) {
+				                File myFile = new File("audio.wav");
+				                byte[] mybytearray = new byte[(int) myFile.length()];
 
-		                FileInputStream fis = null;
+				                FileInputStream fis = null;
 
-		                try {
-		                    fis = new FileInputStream(myFile);
-		                } catch (FileNotFoundException ex) {
-		                    // Do exception handling
-		                }
-		                BufferedInputStream bis = new BufferedInputStream(fis);
+				                try {
+				                    fis = new FileInputStream(myFile);
+				                } catch (FileNotFoundException ex) {
+				                    // Do exception handling
+				                }
+				                BufferedInputStream bis = new BufferedInputStream(fis);
 
-		                try {
-		                    bis.read(mybytearray, 0, mybytearray.length);
-		                    outToClient.write(mybytearray, 0, mybytearray.length);
-		                    outToClient.flush();
-		                    outToClient.close();
-		                    
-		                    System.out.println("Voice Sent!");
-		                } catch (IOException ex) {
-		                    // Do exception handling
-		                }
-		            }
-					
-				} catch (Exception e) {
-					// TODO: handle exception
-					e.printStackTrace();
-				}
+				                try {
+				                    bis.read(mybytearray, 0, mybytearray.length);
+				                    outToClient.write(mybytearray, 0, mybytearray.length);
+				                    outToClient.flush();
+				                    outToClient.close();
+				                    
+				                    System.out.println("Voice Sent!");
+				                } catch (IOException ex) {
+				                    // Do exception handling
+				                }
+				            }
+							
+						} catch (Exception e) {
+							// TODO: handle exception
+							e.printStackTrace();
+						}
+						
+						try {
+							voiceSocket = voiceServerSocket.accept();
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+					}
+				});
 				
-
-				
+				t1.start();
 				
 			    
 			}
@@ -227,11 +233,11 @@ public class Server extends JFrame {
 				}
 			}
 		});
-		btnRecord.setBounds(279, 219, 45, 31);
+		btnRecord.setBounds(279, 219, 45, 32);
 		contentPane.add(btnRecord);
 		
 		txtMsg = new JTextField();
-		txtMsg.setBounds(10, 219, 271, 31);
+		txtMsg.setBounds(10, 219, 271, 33);
 		contentPane.add(txtMsg);
 		txtMsg.setColumns(10);
 		
@@ -253,7 +259,7 @@ public class Server extends JFrame {
 
 			}
 		});
-		btnSend.setBounds(334, 219, 89, 31);
+		btnSend.setBounds(334, 219, 89, 32);
 		contentPane.add(btnSend);
 	}
 }
