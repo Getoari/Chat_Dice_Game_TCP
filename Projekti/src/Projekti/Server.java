@@ -55,7 +55,6 @@ public class Server extends JFrame {
 
 		try {
 			msgServerSocket = new ServerSocket(8888);
-			Thread.sleep(3000);
 			voiceServerSocket = new ServerSocket(8889);
 			voiceSocket = voiceServerSocket.accept();
 		} catch (IOException e1) {
@@ -75,7 +74,7 @@ public class Server extends JFrame {
 	            // socket object to receive incoming client requests
 				msgSocket = msgServerSocket.accept();
 	            
-				msg_text.setText(msg_text.getText().trim()+"\nA new client is connected: " + msgSocket);
+				msg_text.append("A new client is connected: " + msgSocket);
 	             
 	            // obtaining input and out streams
 	            dis = new DataInputStream(msgSocket.getInputStream());
