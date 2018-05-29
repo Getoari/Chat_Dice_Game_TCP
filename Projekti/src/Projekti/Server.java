@@ -26,6 +26,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JEditorPane;
 import java.awt.Font;
+import javax.swing.ImageIcon;
 
 public class Server extends JFrame {
 
@@ -62,19 +63,24 @@ public class Server extends JFrame {
 			}
 		});
 		
-		
-		
+		msgServerSocket = null;
+		msgSocket = null;
 			
-			while(true) {
-				if(msgSocket != null ){
+		while(true) {
+            
+			if(msgServerSocket != null ){
 				try
 		        {
+					msgSocket = msgServerSocket.accept();
+					
+					onlineUsers.setText("A new client is connected: "+ msgSocket +"\n");
+					
+					System.out.println("Assigning new thread for this client");
 		             
 		            // obtaining input and out streams
 		            dis = new DataInputStream(msgSocket.getInputStream());
 		            dos = new DataOutputStream(msgSocket.getOutputStream());
-		             
-		            System.out.println("Assigning new thread for this client");
+		           
 	
 		            // create a new thread object
 		            Thread t = new Thread(new Runnable() {
@@ -102,7 +108,7 @@ public class Server extends JFrame {
 		        catch (Exception e){
 		            e.printStackTrace();
 		        }
-				msgSocket = null;
+				
 			}
 		}
 		
@@ -126,7 +132,10 @@ public class Server extends JFrame {
 		msg_text.setBounds(12, 65, 403, 227);
 		contentPane.add(msg_text);
 
-		btnRecord = new JButton("R");
+		btnRecord = new JButton(new ImageIcon(((new ImageIcon(Server.class.getResource("/images/mic.png"))
+				.getImage()
+	            .getScaledInstance(24, 24,
+	                    java.awt.Image.SCALE_SMOOTH)))));
 		btnRecord.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseReleased(MouseEvent arg0) {
@@ -234,7 +243,7 @@ public class Server extends JFrame {
 				}
 			}
 		});
-		btnRecord.setBounds(274, 305, 45, 55);
+		btnRecord.setBounds(272, 305, 50, 54);
 		contentPane.add(btnRecord);
 		
 		txtMsg = new JTextField();
@@ -260,7 +269,7 @@ public class Server extends JFrame {
 
 			}
 		});
-		btnSend.setBounds(326, 305, 89, 55);
+		btnSend.setBounds(334, 305, 81, 55);
 		contentPane.add(btnSend);
 		
 		btnConnect = new JButton("Connect");
@@ -297,9 +306,7 @@ public class Server extends JFrame {
 	
 			msgServerSocket = new ServerSocket(8888);
 			voiceServerSocket = new ServerSocket(8889);
-			msgSocket = msgServerSocket.accept();
 			voiceSocket = voiceServerSocket.accept();
-			onlineUsers.setText(onlineUsers.getText().trim()+"\nA new client is connected: "+"\n" + msgSocket);
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
