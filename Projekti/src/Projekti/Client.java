@@ -103,7 +103,7 @@ public class Client extends JFrame {
 				            FileOutputStream fos = null;
 				            BufferedOutputStream bos = null;
 				            try {
-				                fos = new FileOutputStream("E:/audio.wav");
+				                fos = new FileOutputStream("audio.wav");
 				                bos = new BufferedOutputStream(fos);
 				                bytesRead = is.read(aByte, 0, aByte.length);
 	
@@ -126,7 +126,7 @@ public class Client extends JFrame {
 					        DataLine.Info info;
 					        Clip clip = null;
 					        
-					        yourFile = new File("E:\\audio.wav");
+					        yourFile = new File("audio.wav");
 					        try {
 								stream = AudioSystem.getAudioInputStream(yourFile);
 							} catch (UnsupportedAudioFileException | IOException e) {

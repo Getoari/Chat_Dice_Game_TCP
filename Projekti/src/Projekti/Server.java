@@ -23,6 +23,9 @@ import java.awt.Color;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JEditorPane;
+import java.awt.Font;
 
 public class Server extends JFrame {
 
@@ -36,7 +39,13 @@ public class Server extends JFrame {
 	static DataInputStream dis;
 	static DataOutputStream dos;
 	static JTextArea msg_text;
+	static JTextArea onlineUsers;
 	static TargetDataLine targetDataLine;
+	private JButton btnConnect;
+	private JButton btnDisconnect;
+	private JLabel lblOnlineUsers;
+	
+	
 	/**
 	 * Launch the application.
 	 * @throws InterruptedException 
@@ -53,63 +62,52 @@ public class Server extends JFrame {
 			}
 		});
 		
-
-		try {
-			msgServerSocket = new ServerSocket(8888);
-			voiceServerSocket = new ServerSocket(8889);
-			voiceSocket = voiceServerSocket.accept();
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
 		
 		
-		
-		while(true) {
 			
-			msgSocket = null;
-			
-			try
-	        {
-	            // socket object to receive incoming client requests
-				msgSocket = msgServerSocket.accept();
-	            
-				msg_text.append("A new client is connected: " + msgSocket + "\n");
-	             
-	            // obtaining input and out streams
-	            dis = new DataInputStream(msgSocket.getInputStream());
-	            dos = new DataOutputStream(msgSocket.getOutputStream());
-	             
-	            System.out.println("Assigning new thread for this client");
-
-	            // create a new thread object
-	            Thread t = new Thread(new Runnable() {
-					
-					@Override
-					public void run() {
-						try {
-							String msgin = "";
-							while(!msgin.equals("exit")) {
-								msgin=dis.readUTF();
-								msg_text.append("Klient:\t"+ msgin+"\n");																		
-							}
+			while(true) {
+				if(msgSocket != null ){
+				try
+		        {
+		             
+		            // obtaining input and out streams
+		            dis = new DataInputStream(msgSocket.getInputStream());
+		            dos = new DataOutputStream(msgSocket.getOutputStream());
+		             
+		            System.out.println("Assigning new thread for this client");
+	
+		            // create a new thread object
+		            Thread t = new Thread(new Runnable() {
 						
-						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
+						@Override
+						public void run() {
+							try {
+								String msgin = "";
+								while(!msgin.equals("exit")) {
+									msgin=dis.readUTF();
+									msg_text.append("Klient:\t"+ msgin+"\n");																		
+								}
+							
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
 						}
-					}
-				});
-
-	            // Invoking the start() method
-	            t.start();
-	             
-	        }
-	        catch (Exception e){
-	            e.printStackTrace();
-	        }
-
+					});
+	
+		            // Invoking the start() method
+		            t.start();
+		             
+		        }
+		        catch (Exception e){
+		            e.printStackTrace();
+		        }
+				msgSocket = null;
+			}
 		}
+		
+			
+		
 	}
 
 	/**
@@ -118,14 +116,14 @@ public class Server extends JFrame {
 	public Server() {
 		setTitle("Server");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 450, 301);
+		setBounds(100, 100, 647, 436);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
 		
 		msg_text = new JTextArea();
-		msg_text.setBounds(10, 11, 403, 197);
+		msg_text.setBounds(12, 65, 403, 227);
 		contentPane.add(msg_text);
 
 		btnRecord = new JButton("R");
@@ -189,6 +187,9 @@ public class Server extends JFrame {
 				
 				t1.start();
 				
+
+				
+				
 			    
 			}
 			@Override
@@ -233,11 +234,11 @@ public class Server extends JFrame {
 				}
 			}
 		});
-		btnRecord.setBounds(279, 219, 45, 32);
+		btnRecord.setBounds(274, 305, 45, 55);
 		contentPane.add(btnRecord);
 		
 		txtMsg = new JTextField();
-		txtMsg.setBounds(10, 219, 271, 33);
+		txtMsg.setBounds(12, 305, 261, 55);
 		contentPane.add(txtMsg);
 		txtMsg.setColumns(10);
 		
@@ -259,7 +260,63 @@ public class Server extends JFrame {
 
 			}
 		});
-		btnSend.setBounds(334, 219, 89, 32);
+		btnSend.setBounds(326, 305, 89, 55);
 		contentPane.add(btnSend);
+		
+		btnConnect = new JButton("Connect");
+		btnConnect.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				connect();
+			}
+		});
+		btnConnect.setBounds(80, 27, 97, 25);
+		contentPane.add(btnConnect);
+		
+		btnDisconnect = new JButton("Disconnect");
+		btnDisconnect.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				disconnect();
+				
+				
+			}
+		});
+		btnDisconnect.setBounds(210, 27, 97, 25);
+		contentPane.add(btnDisconnect);
+		
+		lblOnlineUsers = new JLabel("Online Users");
+		lblOnlineUsers.setFont(new Font("Tahoma", Font.PLAIN, 17));
+		lblOnlineUsers.setBounds(479, 36, 97, 16);
+		contentPane.add(lblOnlineUsers);
+		
+		onlineUsers = new JTextArea();
+		onlineUsers.setBounds(427, 65, 178, 227);
+		contentPane.add(onlineUsers);
 	}
+	public static void connect(){
+		try {
+	
+			msgServerSocket = new ServerSocket(8888);
+			voiceServerSocket = new ServerSocket(8889);
+			msgSocket = msgServerSocket.accept();
+			voiceSocket = voiceServerSocket.accept();
+			onlineUsers.setText(onlineUsers.getText().trim()+"\nA new client is connected: "+"\n" + msgSocket);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		
+	}
+		public static void disconnect() {
+			try {
+				
+				msgServerSocket.close();
+				voiceServerSocket.close();
+				
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			
+		}
 }
