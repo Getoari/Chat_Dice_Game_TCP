@@ -1,7 +1,6 @@
 package Projekti;
 
 import java.net.*;
-import java.util.Calendar;
 import java.io.*;
 import java.awt.Color;
 import java.awt.EventQueue;
@@ -11,7 +10,6 @@ import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.management.timer.Timer;
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
@@ -27,13 +25,21 @@ import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+
 import java.awt.Font;
 import javax.swing.ImageIcon;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import javax.swing.SwingConstants;
+import javax.swing.JScrollPane;
 
-public class Server extends JFrame {
+public class Server extends JFrame implements Runnable {
 
+	/**
+	 * Server v1.0
+	 */
+	private static final long serialVersionUID = -8546228107459408123L;
 	private JPanel contentPane;
 	static private JTextField txtMsg;
 	static private JButton btnRecord;
@@ -52,16 +58,20 @@ public class Server extends JFrame {
 	private JButton btnDisconnect;
 	private JButton btnSend;
 	private JLabel lblOnlineUsers;
-	static boolean serverOnline = false;
+	static private JLabel lblServerAddress;
+	volatile static boolean serverOnline = false;
 	private boolean mouseDown;
 	private static JLabel imgServerStatus;
-	
+	static int clientCount = 0;
+	ClientHandler[] clients = new ClientHandler[50];
+	static Server server = null;
+	private JScrollPane scrollPane;
 	
 	/**
 	 * Launch the application.
 	 * @throws InterruptedException 
 	 */
-	public static void main(String[] args) throws InterruptedException {
+	public static void main(String[] args) throws Exception {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
@@ -72,42 +82,9 @@ public class Server extends JFrame {
 				}
 			}
 		});
-				
-		
-		
-		do {
-			try {
-				msgSocket = msgServerSocket.accept();
-				
-				msg_text.append("New user: " + msgSocket + "\n");
-				 
-	            // obtaining input and out streams
-	            dis = new DataInputStream(msgSocket.getInputStream());
-	            dos = new DataOutputStream(msgSocket.getOutputStream());
-			} catch (Exception e) {
-				
-			}
-		} while(!serverOnline);
+	
+		server = new Server(8888);	
 			
-		 // create a new thread object
-        Thread msgReceiver = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				System.out.println("Assigning new thread for this client");
-				String msgin = "";
-				boolean active = true;
-				while(active) {
-					try {
-						msgin=dis.readUTF();
-						msg_text.append("Klient:\t"+ msgin+"\n");		
-					} catch (IOException e) {
-						active = false;
-					}
-				}				
-			}
-		});
-		msgReceiver.start();
-		
 		while(true) {
 			
 			//Voice Receiver 
@@ -135,7 +112,7 @@ public class Server extends JFrame {
 		            FileOutputStream fos = null;
 		            BufferedOutputStream bos = null;
 		            try {
-		                fos = new FileOutputStream("audio/server/remote/audio.wav");
+		                fos = new FileOutputStream("audio/server/audio.wav");
 		                bos = new BufferedOutputStream(fos);
 		                bytesRead = is.read(aByte, 0, aByte.length);
 
@@ -152,15 +129,23 @@ public class Server extends JFrame {
 		                // Do exception handling
 		            }
 		            
-		            File yourFile;
+		            File directory;
+		            File audioFile;
 			        AudioInputStream stream = null;
 			        AudioFormat format;
 			        DataLine.Info info;
 			        Clip clip = null;
 			        
-			        yourFile = new File("audio/server/remote/audio.wav");
+			        directory = new File("audio/server");
+			        
+			        if (!directory.exists())
+			        	directory.mkdir();
+			        
+			        audioFile = new File("audio/server/audio.wav");
+			        
+			        
 			        try {
-						stream = AudioSystem.getAudioInputStream(yourFile);
+						stream = AudioSystem.getAudioInputStream(audioFile);
 					} catch (UnsupportedAudioFileException | IOException e) {
 						e.printStackTrace();
 					}
@@ -175,10 +160,9 @@ public class Server extends JFrame {
 						e.printStackTrace();
 					}
 			        clip.start();
-			        msg_text.append("Klient: Voice Message! \n");
 				}	
 			}
-		}		
+		}
 	}
 
 	/**
@@ -194,10 +178,14 @@ public class Server extends JFrame {
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
 		
+		scrollPane = new JScrollPane();
+		scrollPane.setBounds(12, 65, 403, 227);
+		contentPane.add(scrollPane);
+		
 		msg_text = new JTextArea();
+		msg_text.setCaretPosition(msg_text.getDocument().getLength());
+		scrollPane.setViewportView(msg_text);
 		msg_text.setEditable(false);
-		msg_text.setBounds(12, 65, 403, 227);
-		contentPane.add(msg_text);
 
 		btnRecord = new JButton(new ImageIcon(((new ImageIcon(Server.class.getResource("/images/mic.png"))
 				.getImage()
@@ -234,7 +222,7 @@ public class Server extends JFrame {
 				            outToClient = new BufferedOutputStream(voiceSendingSocket.getOutputStream());
 				            
 				            if (outToClient != null) {
-				                File myFile = new File("audio/server/local/audio.wav");
+				                File myFile = new File("audio/server/audio.wav");
 				                byte[] mybytearray = new byte[(int) myFile.length()];
 
 				                FileInputStream fis = null;
@@ -252,7 +240,7 @@ public class Server extends JFrame {
 				                    outToClient.flush();
 				                    outToClient.close();
 				                    
-				                    msg_text.append("You: Voice Message!" + "\n");
+				                    msg_text.append("Server: Voice Message!" + "\n");
 				                    System.out.println("Voice Sent!");
 				                } catch (IOException ex) {
 				                    // Do exception handling
@@ -333,7 +321,7 @@ public class Server extends JFrame {
 						public void run() {
 							// TODO Auto-generated method stub
 							AudioInputStream ais = new AudioInputStream(targetDataLine);
-							File wavFile = new File("audio/server/local/audio.wav");
+							File wavFile = new File("audio/server/audio.wav");
 							try {
 								AudioSystem.write(ais, AudioFileFormat.Type.WAVE, wavFile);
 							} catch (IOException e) {
@@ -370,15 +358,10 @@ public class Server extends JFrame {
 			public void actionPerformed(ActionEvent arg0) 
 			{
 				try {
-					String msgout="";
-					msgout=txtMsg.getText().trim();
-					dos.writeUTF(msgout);
-
-					msg_text.append("You:\t" + msgout + "\n");
+					server.handle(-1, txtMsg.getText().trim());
 					txtMsg.setText("");
-					
 				} catch (Exception e2) {
-					// TODO: handle exception
+					e2.printStackTrace();
 				}
 
 			}
@@ -392,23 +375,22 @@ public class Server extends JFrame {
 				connect();
 			}
 		});
-		btnConnect.setBounds(80, 27, 97, 25);
+		btnConnect.setBounds(196, 27, 97, 25);
 		contentPane.add(btnConnect);
 		
 		btnDisconnect = new JButton("Disconnect");
 		btnDisconnect.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				disconnect();
-				
-				
+				disconnect();				
 			}
 		});
-		btnDisconnect.setBounds(210, 27, 97, 25);
+		btnDisconnect.setBounds(301, 27, 114, 25);
 		contentPane.add(btnDisconnect);
 		
 		lblOnlineUsers = new JLabel("Online Users");
+		lblOnlineUsers.setHorizontalAlignment(SwingConstants.CENTER);
 		lblOnlineUsers.setFont(new Font("Tahoma", Font.PLAIN, 17));
-		lblOnlineUsers.setBounds(479, 36, 97, 16);
+		lblOnlineUsers.setBounds(425, 30, 180, 25);
 		contentPane.add(lblOnlineUsers);
 		
 		onlineUsers = new JTextArea();
@@ -418,17 +400,60 @@ public class Server extends JFrame {
 		
 		imgServerStatus = new JLabel();
 		imgServerStatus.setIcon(new ImageIcon(Server.class.getResource("/images/offline.png")));
-		imgServerStatus.setBounds(27, 27, 25, 25);
+		imgServerStatus.setBounds(12, 29, 25, 25);
 		contentPane.add(imgServerStatus);
+		
+		lblServerAddress = new JLabel("Disconnected");
+		lblServerAddress.setFont(new Font("Tahoma", Font.PLAIN, 12));
+		lblServerAddress.setBounds(47, 30, 115, 22);
+		contentPane.add(lblServerAddress);
 	}
+	
+	public Server(int port) {  
+		try {  
+			System.out.println("Binding to port " + port + ", please wait  ...");
+			msgServerSocket = new ServerSocket(port);  
+			System.out.println("Server started: " + msgServerSocket);
+			
+		} catch(IOException ioe) {  
+			System.out.println("Can not bind to port " + port + ": " + ioe.getMessage()); 
+		}
+	}
+	
+    public void stop() {  
+    	try {  
+    		if (dis != null)  dis.close();
+		    if (dos != null)  dos.close();
+		    if (msgSocket != null)  msgSocket.close();
+        } catch(IOException ioe) {  
+    	   System.out.println("Error closing ...");
+        }
+    }
+
 	public static void connect(){
 		try {
-	
-			msgServerSocket = new ServerSocket(8888);
-			voiceServerSS = new ServerSocket(8889);
-			voiceServerRS = new ServerSocket(8890);
-			imgServerStatus.setIcon(new ImageIcon(Server.class.getResource("/images/online.png")));
-			serverOnline = true;
+			if(!serverOnline) {				
+				Thread serverStarter = new Thread(new Runnable() {
+					
+					@Override
+					public void run() {
+						server.run();
+					}
+				});
+				
+				serverStarter.start();
+				
+				lblServerAddress.setText("Connected");
+				
+				voiceServerSS = new ServerSocket(8889);
+				voiceServerRS = new ServerSocket(8890);
+				
+				imgServerStatus.setIcon(new ImageIcon(Server.class.getResource("/images/online.png")));
+				serverOnline = true;
+			} else {
+				JOptionPane.showMessageDialog(null, "Server is currently active!");
+			}
+			
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -438,17 +463,107 @@ public class Server extends JFrame {
 	}
 	public static void disconnect() {
 		try {
+			server.stop();
 			
-			msgServerSocket.close();
 			voiceServerSS.close();
 			voiceServerRS.close();
 			
-			imgServerStatus.setIcon(new ImageIcon(Server.class.getResource("/images/offline.png")));
+			lblServerAddress.setText("Dissconected");
 			
+			serverOnline = false;
+			
+			imgServerStatus.setIcon(new ImageIcon(Server.class.getResource("/images/offline.png")));
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		
+	}
+	
+	private int findClient(int id) {
+		for (int i = 0; i < clientCount; i++)
+			if (clients[i].getID() == id)
+				return i;
+		return -1;
+	}
+		
+	public synchronized void handle(int id, String input) {
+		if (input.equals(".exit")) {  
+			clients[findClient(id)].send(".exit");
+	        remove(id); 
+		} else if( id == -1) {
+			msg_text.append("Server: " + input + "\n");
+            for (int i = 0; i < clientCount; i++) {
+	            clients[i].send("Server: " + input + "\n");
+            }
+		} else {
+            msg_text.append(id + ": " + input);
+            for (int i = 0; i < clientCount; i++) {
+	            clients[i].send(id + ": " + input);
+	        }
+	    }
+	         
+	}
+	
+	public synchronized void updateOnlineUsers() {
+        if(clientCount == 0) {
+        	onlineUsers.setText("");
+        } else {
+			for (int i = 0; i < clientCount; i++) {
+	        	onlineUsers.setText("");
+	            onlineUsers.append(clients[i].getID()+"\n");
+	        }
+        }
+    }
+	
+	private void addThread(Socket socket)   {  
+		if (clientCount < clients.length) {  
+			System.out.println("Client accepted: " + socket);
+	        clients[clientCount] = new ClientHandler(this, socket);
+	        
+	        try {  
+	        	clients[clientCount].open(); 
+	            clients[clientCount].start();
+	            onlineUsers.append(clients[clientCount].getID()+"\n");
+	          
+	            clientCount++; 
+	         } catch(IOException ioe) {  
+	        	 System.out.println("Error opening thread: " + ioe); 
+	         } 
+	   } else {
+	         System.out.println("Client refused: maximum " + clients.length + " reached.");
+	   }
+	}
+	
+	public synchronized void remove(int ID) {  
+		int pos = findClient(ID);
+	    if (pos >= 0) {
+	    	ClientHandler toTerminate = clients[pos];
+	        System.out.println("Removing client thread " + ID + " at " + pos);
+	        if (pos < clientCount-1)
+	        	for (int i = pos+1; i < clientCount; i++)
+	        		clients[i-1] = clients[i];
+	        clientCount--;
+	        updateOnlineUsers();
+	        try {  
+	        	toTerminate.close();
+	        	toTerminate.interrupt();
+	        } catch(IOException ioe) {  
+	        	System.out.println("Error closing thread: " + ioe); 
+	        }
+	    }
+	}
+
+	@Override
+	public void run() {
+		while (true) {  
+			try { 
+				System.out.println("Waiting for a client ..."); 
+				addThread(msgServerSocket.accept()); 
+			} catch(IOException ioe) {  
+	        	System.out.println("Server accept error: " + ioe);
+	        	stop(); 
+	        }
+	    }		
 	}
 }

@@ -27,9 +27,14 @@ import java.awt.event.MouseEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import javax.swing.JScrollPane;
 
 public class Client extends JFrame {
 
+	/**
+	 * Client v1.0
+	 */
+	private static final long serialVersionUID = 352630095378608223L;
 	private JPanel contentPane;
 	private JTextField txtMsg;
 	
@@ -44,6 +49,8 @@ public class Client extends JFrame {
 	static JButton btnSend;
 	private boolean mouseDown;
 	static TargetDataLine targetDataLine;
+	private JScrollPane scrollPane;
+	final static String serverAddress = "localhost";
 	/**
 	 * Launch the application.
 	 */
@@ -61,7 +68,7 @@ public class Client extends JFrame {
 		
 		
 		try {
-			msgSocket = new Socket("localhost",8888);
+			msgSocket = new Socket(serverAddress,8888);
 			
 			// Message Receiver Thread
 			Thread t1 = new Thread(new Runnable() {
@@ -75,7 +82,7 @@ public class Client extends JFrame {
 							dos = new DataOutputStream(msgSocket.getOutputStream());
 					
 							msgin=dis.readUTF();
-							msg_text.append("Server:\t"+msgin+"\n");
+							msg_text.append(msgin);
 						} catch (IOException e) {
 							
 						}
@@ -89,7 +96,7 @@ public class Client extends JFrame {
 			while(true) {
 					
 				try {
-					voiceReceivingSocket = new Socket("localhost",8889);
+					voiceReceivingSocket = new Socket(serverAddress,8889);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -111,7 +118,7 @@ public class Client extends JFrame {
 		            FileOutputStream fos = null;
 		            BufferedOutputStream bos = null;
 		            try {
-		                fos = new FileOutputStream("audio/client/remote/audio.wav");
+		                fos = new FileOutputStream("audio/client/audio.wav");
 		                bos = new BufferedOutputStream(fos);
 		                bytesRead = is.read(aByte, 0, aByte.length);
 
@@ -128,15 +135,22 @@ public class Client extends JFrame {
 		                // Do exception handling
 		            }
 		            
-		            File yourFile;
+		            File directory;
+		            File audioFile;
 			        AudioInputStream stream = null;
 			        AudioFormat format;
 			        DataLine.Info info;
 			        Clip clip = null;
 			        
-			        yourFile = new File("audio/client/remote/audio.wav");
+			        directory = new File("audio/client");
+			        
+			        if (!directory.exists())
+			        	directory.mkdirs();
+			        
+			        audioFile = new File("audio/client/audio.wav");
+			        
 			        try {
-						stream = AudioSystem.getAudioInputStream(yourFile);
+						stream = AudioSystem.getAudioInputStream(audioFile);
 					} catch (UnsupportedAudioFileException | IOException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -172,7 +186,7 @@ public class Client extends JFrame {
 	 */
 	public Client() {
 		setResizable(false);
-		setTitle("Client");
+		setTitle("Client: " + msgSocket.getLocalPort());
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 468, 327);
 		contentPane = new JPanel();
@@ -180,10 +194,15 @@ public class Client extends JFrame {
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
 		
+		scrollPane = new JScrollPane();
+		scrollPane.setBounds(10, 11, 414, 206);
+		contentPane.add(scrollPane);
+		
 		msg_text = new JTextArea();
+		msg_text.setCaretPosition(msg_text.getDocument().getLength());
 		msg_text.setEditable(false);
 		msg_text.setBounds(10, 11, 414, 206);
-		contentPane.add(msg_text);
+		scrollPane.setViewportView(msg_text);
 		
 		txtMsg = new JTextField();
 		txtMsg.addKeyListener(new KeyAdapter() {
@@ -200,6 +219,10 @@ public class Client extends JFrame {
 		btnRecord = new JButton(new ImageIcon(((new ImageIcon(Server.class.getResource("/images/mic.png"))
 				.getImage()
 	            .getScaledInstance(24, 24, java.awt.Image.SCALE_SMOOTH)))));
+		btnRecord.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+			}
+		});
 		btnRecord.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseReleased(MouseEvent arg0) {
@@ -211,7 +234,7 @@ public class Client extends JFrame {
 				targetDataLine.close();
 				
 				try {
-					voiceSendingSocket = new Socket("localhost",8890);
+					voiceSendingSocket = new Socket(serverAddress,8890);
 				} catch (IOException e2) {
 					// TODO Auto-generated catch block
 					e2.printStackTrace();
@@ -228,7 +251,7 @@ public class Client extends JFrame {
 				            outToClient = new BufferedOutputStream(voiceSendingSocket.getOutputStream());
 				            
 				            if (outToClient != null) {
-				                File myFile = new File("audio/client/local/audio.wav");
+				                File myFile = new File("audio/client/audio.wav");
 				                byte[] mybytearray = new byte[(int) myFile.length()];
 
 				                FileInputStream fis = null;
@@ -246,6 +269,7 @@ public class Client extends JFrame {
 				                    outToClient.flush();
 				                    outToClient.close();
 				                    
+				                    dos.writeUTF("Voice Message!\n");
 				                    System.out.println("Voice Sent!");
 				                } catch (IOException ex) {
 				                    // Do exception handling
@@ -327,7 +351,7 @@ public class Client extends JFrame {
 						public void run() {
 							// TODO Auto-generated method stub
 							AudioInputStream ais = new AudioInputStream(targetDataLine);
-							File wavFile = new File("audio/client/local/audio.wav");
+							File wavFile = new File("audio/client/audio.wav");
 							try {
 								AudioSystem.write(ais, AudioFileFormat.Type.WAVE, wavFile);
 							} catch (IOException e) {
@@ -351,12 +375,9 @@ public class Client extends JFrame {
 		btnSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) 
 			{
-				String msgout="";
-				msgout=txtMsg.getText().trim();
 				try 
 				{
-					dos.writeUTF(msgout);
-					msg_text.append("You:\t" + msgout + "\n");
+					dos.writeUTF(txtMsg.getText().trim() + "\n");
 					txtMsg.setText("");
 				} 
 				catch (Exception e) 

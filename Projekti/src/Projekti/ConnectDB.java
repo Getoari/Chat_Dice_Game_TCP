@@ -14,7 +14,7 @@ public class ConnectDB {
 			Connection conn = DriverManager.getConnection("jdbc:mysql://localhost/Dice","root","toor");
 			return conn;
 		} catch (Exception e) {
-			JOptionPane.showMessageDialog(null, "Error: "+e.getMessage());
+			e.printStackTrace();
 			return null;
 		}
 	}
