@@ -6,6 +6,11 @@ import java.awt.EventQueue;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
+
+import com.mysql.jdbc.StringUtils;
+
+import net.proteanit.sql.DbUtils;
+
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.sound.sampled.AudioFileFormat;
@@ -20,6 +25,13 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import java.net.*;
+import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.Random;
+import java.util.Scanner;
 import java.io.*;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -27,14 +39,21 @@ import java.awt.event.MouseEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import javax.swing.JTable;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.SwingConstants;
+import java.awt.Font;
+import javax.swing.JSpinner;
 
 public class Client extends JFrame {
 
 	/**
-	 * Client v1.0
+	 * Client v1.1
 	 */
-	private static final long serialVersionUID = 352630095378608223L;
+	private static final long serialVersionUID = 1L;
 	private JPanel contentPane;
 	private JTextField txtMsg;
 	
@@ -49,8 +68,18 @@ public class Client extends JFrame {
 	static JButton btnSend;
 	private boolean mouseDown;
 	static TargetDataLine targetDataLine;
+	Connection conn=null;
+	PreparedStatement pst=null;
+	ResultSet rs=null;
+	private JButton btn_Roll_Dice1;
+	static int dice1;
+	static int dice2;
+	static String vlera;
+	static int vlera_pritur;
+	private JTextField txt_vlera_pritur;
 	private JScrollPane scrollPane;
 	final static String serverAddress = "localhost";
+	
 	/**
 	 * Launch the application.
 	 */
@@ -135,15 +164,17 @@ public class Client extends JFrame {
 		                // Do exception handling
 		            }
 		            
-		            File directory;
 		            File audioFile;
+		            File directory;
 			        AudioInputStream stream = null;
 			        AudioFormat format;
 			        DataLine.Info info;
 			        Clip clip = null;
 			        
-			        directory = new File("audio/client");
+			        audioFile = new File("audio/client/audio.wav");
 			        
+			        directory = new File("audio/client");
+			        			        
 			        if (!directory.exists())
 			        	directory.mkdirs();
 			        
@@ -185,10 +216,12 @@ public class Client extends JFrame {
 	 * Create the frame.
 	 */
 	public Client() {
+		conn=MySqlConnector.connectFiekDb();
 		setResizable(false);
+		setTitle("Client");
 		setTitle("Client: " + msgSocket.getLocalPort());
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 468, 327);
+		setBounds(100, 100, 858, 333);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
@@ -213,14 +246,14 @@ public class Client extends JFrame {
 				}
 			}
 		});
-		txtMsg.setBounds(10, 228, 257, 54);
+		txtMsg.setBounds(10, 228, 256, 54);
 		contentPane.add(txtMsg);
 		
 		btnRecord = new JButton(new ImageIcon(((new ImageIcon(Server.class.getResource("/images/mic.png"))
 				.getImage()
 	            .getScaledInstance(24, 24, java.awt.Image.SCALE_SMOOTH)))));
 		btnRecord.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
+			public void actionPerformed(ActionEvent e) {
 			}
 		});
 		btnRecord.addMouseListener(new MouseAdapter() {
@@ -234,7 +267,7 @@ public class Client extends JFrame {
 				targetDataLine.close();
 				
 				try {
-					voiceSendingSocket = new Socket(serverAddress,8890);
+					voiceSendingSocket = new Socket("localhost",8890);
 				} catch (IOException e2) {
 					// TODO Auto-generated catch block
 					e2.printStackTrace();
@@ -375,8 +408,9 @@ public class Client extends JFrame {
 		btnSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) 
 			{
-				try 
-				{
+
+				try {
+
 					dos.writeUTF(txtMsg.getText().trim() + "\n");
 					txtMsg.setText("");
 				} 
@@ -389,5 +423,187 @@ public class Client extends JFrame {
 		btnSend.setBounds(329, 228, 95, 53);
 		contentPane.add(btnSend);
 		
+		
+		
+		JPanel panel = new JPanel();
+		panel.setBounds(449, 109, 168, 173);
+		contentPane.add(panel);
+		panel.setLayout(null);
+		JLabel lblRoll1 = new JLabel("");
+		lblRoll1.setIcon(new ImageIcon(Client.class.getResource("/images/dice-rolling-1.png")));
+		lblRoll1.setBounds(0, 13, 168, 137);
+		panel.add(lblRoll1);
+		
+		JLabel lblRez1 = new JLabel("");
+		lblRez1.setHorizontalAlignment(SwingConstants.LEFT);
+		lblRez1.setForeground(Color.RED);
+		lblRez1.setBounds(0, 141, 168, 33);
+		panel.add(lblRez1);
+		
+		JPanel panel_1 = new JPanel();
+		panel_1.setLayout(null);
+		panel_1.setBounds(654, 108, 168, 173);
+		contentPane.add(panel_1);
+		
+		JLabel lblRoll2 = new JLabel("");
+		lblRoll2.setIcon(new ImageIcon(Client.class.getResource("/images/dice-rolling-1.png")));
+		lblRoll2.setBounds(0, 13, 168, 137);
+		panel_1.add(lblRoll2);
+		
+		JLabel lblRez2 = new JLabel("");
+		lblRez2.setHorizontalAlignment(SwingConstants.LEFT);
+		lblRez2.setForeground(Color.RED);
+		lblRez2.setBounds(0, 141, 168, 32);
+		panel_1.add(lblRez2);
+		
+		
+		btn_Roll_Dice1 = new JButton("Roll The Dice");
+		btn_Roll_Dice1.setBounds(438, 71, 384, 25);
+		contentPane.add(btn_Roll_Dice1);
+		
+		txt_vlera_pritur = 
+				new JTextField();
+		
+		
+		txt_vlera_pritur.setBounds(545, 11, 275, 33);
+		contentPane.add(txt_vlera_pritur);
+		txt_vlera_pritur.setColumns(10);
+		
+		JLabel lbl_vlera_pritur = new JLabel("Vlera e pritur :");
+		lbl_vlera_pritur.setFont(new Font("Tahoma", Font.PLAIN, 16));
+		lbl_vlera_pritur.setBounds(436, 17, 111, 16);
+		contentPane.add(lbl_vlera_pritur);
+		
+		JLabel lblValidate = new JLabel("");
+		lblValidate.setHorizontalAlignment(SwingConstants.CENTER);
+		lblValidate.setForeground(Color.RED);
+		lblValidate.setFont(new Font("Tahoma", Font.PLAIN, 16));
+		lblValidate.setBounds(436, 46, 386, 25);
+		contentPane.add(lblValidate);
+		
+		
+		btn_Roll_Dice1.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				int count=1;
+				if(!txt_vlera_pritur.getText().toString().equals("")) { 
+					if(StringUtils.isStrictlyNumeric(txt_vlera_pritur.getText().toString())) { 
+					vlera=txt_vlera_pritur.getText();
+					vlera_pritur=Integer.parseInt(vlera);
+					
+				
+					dice1 = roll(lblRoll1);
+					dice2 = roll(lblRoll2);
+					
+					
+					if(vlera_pritur==(dice1+dice2)){
+						
+						try 
+						{
+							String sql="insert into dice (dice1,dice2,diceSum,won,price) values (?,?,?,?,?)";
+							pst=conn.prepareStatement(sql);
+							 
+						      pst.setInt (1, dice1);
+						      pst.setInt (2, dice2) ;
+						      pst.setInt(3, dice1+dice2);
+						      pst.setBoolean(4, true);
+						      pst.setString(5, "1000");
+							  pst.execute();
+							  pst.close();
+							
+						} 
+						catch (SQLException e5) 
+						{
+							JOptionPane.showMessageDialog(null, "Error:"+e5.getMessage());
+						} 
+						JOptionPane.showMessageDialog(null, "Urime keni fituar 1000euro\n"+"Shuma = "+(dice1+dice2)+"\nVlera e pritur = "+vlera_pritur);
+					
+						txt_vlera_pritur.setText("");
+						lblRoll1.setIcon(new javax.swing.ImageIcon(getClass().getResource("")));
+						lblRoll2.setIcon(new javax.swing.ImageIcon(getClass().getResource("")));
+					}
+					else {
+						
+						try 
+						{
+							String sql="insert into dice (dice1,dice2,diceSum,won,price) values (?,?,?,?,?)";
+							pst=conn.prepareStatement(sql);
+							 
+						      pst.setInt (1, dice1);
+						      pst.setInt (2, dice2) ;
+						      pst.setInt(3, dice1+dice2);
+						      pst.setBoolean(4, false);
+						      pst.setString(5, "0");
+							  pst.execute();
+							  pst.close();
+							
+						} 
+						catch (SQLException e5) 
+						{
+							JOptionPane.showMessageDialog(null, "Error:"+e5.getMessage());
+						} 
+						JOptionPane.showMessageDialog(null,"Na vjen keq, vlera e pritur nuk perputhet me shumen e rene.\nShuma = "+(dice1+dice2)+ 
+								" \n Vlera e pritur = "+vlera_pritur + " \n"+
+						   "Provoni perseri.");
+						txt_vlera_pritur.setText("");
+						lblRoll1.setIcon(new javax.swing.ImageIcon(getClass().getResource("")));
+						lblRoll2.setIcon(new javax.swing.ImageIcon(getClass().getResource("")));
+						
+					}
+						}
+					
+					else {
+					lblValidate.setText("Vlera e pritur nuk mund te jete tekst!!!");
+					txt_vlera_pritur.addMouseListener(new MouseAdapter() {
+						@Override
+						public void mouseEntered(MouseEvent e) {
+							lblValidate.setText("");
+						}
+					});
+					
+		
+				}
+					
+				}
+					else {
+						lblValidate.setText("Vlera e pritur nuk mund te jete e zbrazet!!!!");
+						txt_vlera_pritur.addMouseListener(new MouseAdapter() {
+							@Override
+							public void mouseEntered(MouseEvent e) {
+								lblValidate.setText("");
+							}
+						});
+						
+					}
+		}
+		
+		
+		int roll(JLabel lbl) {
+			Random rd1=new Random();
+			int random1 = 0;
+			random1=rd1.nextInt(6)+1;
+			switch(random1){
+			case 1:
+				lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-1.png")));
+				break;
+			case 2:
+				lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-2.png")));
+				break;
+			case 3:
+				lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-3.png")));
+				break;
+			case 4:
+				lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-4.png")));
+				break;		
+			case 5:
+				lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-5.png")));
+				break;
+			case 6:
+				lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-6.png")));
+				break;
+			}
+			return random1;
+		}
+		
+});
 	}
-}
+		}
