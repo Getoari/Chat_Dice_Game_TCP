@@ -9,7 +9,6 @@ import javax.swing.border.EmptyBorder;
 
 import com.mysql.jdbc.StringUtils;
 
-import net.proteanit.sql.DbUtils;
 
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -27,13 +26,8 @@ import javax.swing.JButton;
 import java.net.*;
 import java.sql.*;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.Random;
-import java.util.Scanner;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.io.*;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -41,16 +35,12 @@ import java.awt.event.MouseEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import javax.swing.JTable;
 import javax.swing.JScrollPane;
-import javax.swing.JSplitPane;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
 
 import java.awt.Font;
-import javax.swing.JSpinner;
 
 public class Client extends JFrame {
 
@@ -102,7 +92,6 @@ public class Client extends JFrame {
 		
 		try {
 			msgSocket = new Socket(serverAddress,8888);
-			Thread.sleep(3000);
 			// Message Receiver Thread
 			Thread t1 = new Thread(new Runnable() {
 				
@@ -128,6 +117,90 @@ public class Client extends JFrame {
 			
 			// Voice Receiver
 			while(true) {
+				try {
+					voiceReceivingSocket = new Socket(serverAddress,8889);
+					
+					Thread voiceHandler = new Thread(new Runnable() {
+						
+						@Override
+						public void run() {
+							InputStream is = null;
+							try {
+								is = voiceReceivingSocket.getInputStream();
+							} catch (IOException e1) {
+								is = null;
+							}
+							
+							byte[] aByte = new byte[1];
+							int bytesRead;
+
+							ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+							if (is != null) {
+
+								FileOutputStream fos = null;
+								BufferedOutputStream bos = null;
+								try {
+									fos = new FileOutputStream("audio/client/audio.wav");
+									bos = new BufferedOutputStream(fos);
+									bytesRead = is.read(aByte, 0, aByte.length);
+
+									do {
+										baos.write(aByte);
+										bytesRead = is.read(aByte);
+									} while (bytesRead != -1);
+
+									bos.write(baos.toByteArray());
+									bos.flush();
+									bos.close();
+									is.close();
+								} catch (IOException ex) {
+									// Do exception handling
+									ex.printStackTrace();
+								}
+								
+								File directory;
+								File audioFile;
+								AudioInputStream stream = null;
+								AudioFormat format;
+								DataLine.Info info;
+								Clip clip = null;
+								
+								directory = new File("audio/client");
+								
+								if (!directory.exists())
+									directory.mkdir();
+								
+								audioFile = new File("audio/client/audio.wav");
+								
+								
+								try {
+									stream = AudioSystem.getAudioInputStream(audioFile);
+								} catch (UnsupportedAudioFileException | IOException e) {
+									e.printStackTrace();
+								}
+								format = stream.getFormat();
+								info = new DataLine.Info(Clip.class, format);
+								try {
+									clip = (Clip) AudioSystem.getLine(info);
+									clip.open(stream);
+								} catch (LineUnavailableException e) {
+									e.printStackTrace();
+								} catch (IOException e) {
+									e.printStackTrace();
+								}
+								clip.start();
+								msg_text.append("Server: Voice Message.\n");
+								
+								
+							}
+						}
+					});
+					
+					voiceHandler.start();
+				} catch (IOException e2) {
+					e2.printStackTrace();
+				}
 					
 				try {
 					voiceReceivingSocket = new Socket(serverAddress,8889);
@@ -225,7 +298,7 @@ public class Client extends JFrame {
 		setResizable(false);
 		setTitle("Client");
 		try {
-			Thread.sleep(3000);
+			Thread.sleep(2000);
 		} catch (InterruptedException e3) {
 			// TODO Auto-generated catch block
 			e3.printStackTrace();
@@ -278,7 +351,7 @@ public class Client extends JFrame {
 				targetDataLine.close();
 				
 				try {
-					voiceSendingSocket = new Socket("localhost",8890);
+					voiceSendingSocket = new Socket(serverAddress,8890);
 				} catch (IOException e2) {
 					// TODO Auto-generated catch block
 					e2.printStackTrace();
@@ -495,10 +568,9 @@ public class Client extends JFrame {
 		
 		btn_Roll_Dice1.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				int count=1;
 				if(!txt_vlera_pritur.getText().toString().equals("")) { 
 					if(StringUtils.isStrictlyNumeric(txt_vlera_pritur.getText().toString())) {
-						if(Integer.valueOf(txt_vlera_pritur.getText()) >= 1 && Integer.valueOf(txt_vlera_pritur.getText()) <= 12 ) {
+						if(Integer.valueOf(txt_vlera_pritur.getText()) > 1 && Integer.valueOf(txt_vlera_pritur.getText()) < 12 ) {
 							
 							vlera=txt_vlera_pritur.getText();
 							vlera_pritur=Integer.parseInt(vlera);
@@ -593,35 +665,36 @@ public class Client extends JFrame {
 					});
 					
 				}
-		}
-
-		int roll(JLabel lbl) {
-			Random rd=new Random();
-			int random = 0;
-			random=rd.nextInt(6)+1;
-			switch(random){
-			case 1:
-				lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-1.png")));
-				break;
-			case 2:
-				lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-2.png")));
-				break;
-			case 3:
-				lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-3.png")));
-				break;
-			case 4:
-				lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-4.png")));
-				break;		
-			case 5:
-				lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-5.png")));
-				break;
-			case 6:
-				lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-6.png")));
-				break;
 			}
-			return random;
-		}
-		
-});
+	
+	
+			int roll(JLabel lbl) {
+				Random rd=new Random();
+				int random = 0;
+				random=rd.nextInt(6)+1;
+				switch(random){
+				case 1:
+					lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-1.png")));
+					break;
+				case 2:
+					lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-2.png")));
+					break;
+				case 3:
+					lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-3.png")));
+					break;
+				case 4:
+					lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-4.png")));
+					break;		
+				case 5:
+					lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-5.png")));
+					break;
+				case 6:
+					lbl.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-6.png")));
+					break;
+				}
+				return random;
+			}
+			
+		});
 	}
-		}
+}

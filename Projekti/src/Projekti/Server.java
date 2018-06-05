@@ -33,7 +33,6 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import javax.swing.SwingConstants;
 import javax.swing.JScrollPane;
-import javax.swing.JSpinner;
 
 public class Server extends JFrame implements Runnable {
 
@@ -93,79 +92,90 @@ public class Server extends JFrame implements Runnable {
 			if(serverOnline) {
 				try {
 					voiceReceivingSocket = voiceServerRS.accept();
+					
+					Thread voiceHandler = new Thread(new Runnable() {
+						
+						@Override
+						public void run() {
+							InputStream is = null;
+							try {
+								is = voiceReceivingSocket.getInputStream();
+							} catch (IOException e1) {
+								is = null;
+							}
+					        
+					        byte[] aByte = new byte[1];
+					        int bytesRead;
+
+					        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+					        if (is != null) {
+
+					            FileOutputStream fos = null;
+					            BufferedOutputStream bos = null;
+					            try {
+					                fos = new FileOutputStream("audio/server/audio.wav");
+					                bos = new BufferedOutputStream(fos);
+					                bytesRead = is.read(aByte, 0, aByte.length);
+
+					                do {
+				                        baos.write(aByte);
+				                        bytesRead = is.read(aByte);
+					                } while (bytesRead != -1);
+
+					                bos.write(baos.toByteArray());
+					                bos.flush();
+					                bos.close();
+					                is.close();
+					            } catch (IOException ex) {
+					                // Do exception handling
+					            	ex.printStackTrace();
+					            }
+					            
+					            File directory;
+					            File audioFile;
+						        AudioInputStream stream = null;
+						        AudioFormat format;
+						        DataLine.Info info;
+						        Clip clip = null;
+						        
+						        directory = new File("audio/server");
+						        
+						        if (!directory.exists())
+						        	directory.mkdir();
+						        
+						        audioFile = new File("audio/server/audio.wav");
+						        
+						        
+						        try {
+									stream = AudioSystem.getAudioInputStream(audioFile);
+								} catch (UnsupportedAudioFileException | IOException e) {
+									e.printStackTrace();
+								}
+						        format = stream.getFormat();
+						        info = new DataLine.Info(Clip.class, format);
+						        try {
+									clip = (Clip) AudioSystem.getLine(info);
+							        clip.open(stream);
+								} catch (LineUnavailableException e) {
+									e.printStackTrace();
+								} catch (IOException e) {
+									e.printStackTrace();
+								}
+						        clip.start();
+					        }
+						}
+					});
+					
+					voiceHandler.start();
 				} catch (IOException e2) {
 					e2.printStackTrace();
 				}
 				
-				InputStream is = null;
-				try {
-					is = voiceReceivingSocket.getInputStream();
-				} catch (IOException e1) {
-					is = null;
-				}
-		        
-		        byte[] aByte = new byte[1];
-		        int bytesRead;
-
-		        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-		        if (is != null) {
-
-		            FileOutputStream fos = null;
-		            BufferedOutputStream bos = null;
-		            try {
-		                fos = new FileOutputStream("audio/server/audio.wav");
-		                bos = new BufferedOutputStream(fos);
-		                bytesRead = is.read(aByte, 0, aByte.length);
-
-		                do {
-	                        baos.write(aByte);
-	                        bytesRead = is.read(aByte);
-		                } while (bytesRead != -1);
-
-		                bos.write(baos.toByteArray());
-		                bos.flush();
-		                bos.close();
-		                is.close();
-		            } catch (IOException ex) {
-		                // Do exception handling
-		            	ex.printStackTrace();
-		            }
-		            
-		            File directory;
-		            File audioFile;
-			        AudioInputStream stream = null;
-			        AudioFormat format;
-			        DataLine.Info info;
-			        Clip clip = null;
-			        
-			        directory = new File("audio/server");
-			        
-			        if (!directory.exists())
-			        	directory.mkdir();
-			        
-			        audioFile = new File("audio/server/audio.wav");
-			        
-			        
-			        try {
-						stream = AudioSystem.getAudioInputStream(audioFile);
-					} catch (UnsupportedAudioFileException | IOException e) {
-						e.printStackTrace();
-					}
-			        format = stream.getFormat();
-			        info = new DataLine.Info(Clip.class, format);
-			        try {
-						clip = (Clip) AudioSystem.getLine(info);
-				        clip.open(stream);
-					} catch (LineUnavailableException e) {
-						e.printStackTrace();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-			        clip.start();
-				}	
-			}
+			
+			}	
 		}
+		
 	}
 
 	/**
