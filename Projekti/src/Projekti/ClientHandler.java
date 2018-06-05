@@ -41,13 +41,18 @@ public class ClientHandler extends Thread {
 
     public void run() {
     	System.out.println("Server Thread " + id + " running.");
-        while (true) {  
+        while (!socket.isClosed()) {  
         	try {
-        		if(!socket.isClosed())
-        			server.handle(id, dis.readUTF());
+    			server.handle(id, dis.readUTF());
             } catch(IOException ioe) {  
             	System.out.println(id + " ERROR reading: " + ioe.getMessage());
             	server.remove(id);
+            	try {
+					socket.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
            }
         }
     }

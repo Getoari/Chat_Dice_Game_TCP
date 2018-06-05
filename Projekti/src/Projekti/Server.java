@@ -33,6 +33,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import javax.swing.SwingConstants;
 import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
 
 public class Server extends JFrame implements Runnable {
 
@@ -66,6 +67,7 @@ public class Server extends JFrame implements Runnable {
 	ClientHandler[] clients = new ClientHandler[50];
 	static Server server = null;
 	private JScrollPane scrollPane;
+	static Thread serverStarter;
 	
 	/**
 	 * Launch the application.
@@ -127,6 +129,7 @@ public class Server extends JFrame implements Runnable {
 		                is.close();
 		            } catch (IOException ex) {
 		                // Do exception handling
+		            	ex.printStackTrace();
 		            }
 		            
 		            File directory;
@@ -433,7 +436,7 @@ public class Server extends JFrame implements Runnable {
 	public static void connect(){
 		try {
 			if(!serverOnline) {				
-				Thread serverStarter = new Thread(new Runnable() {
+				serverStarter = new Thread(new Runnable() {
 					
 					@Override
 					public void run() {
@@ -464,9 +467,12 @@ public class Server extends JFrame implements Runnable {
 	public static void disconnect() {
 		try {
 			server.stop();
+			serverStarter.interrupt();
 			
 			voiceServerSS.close();
 			voiceServerRS.close();
+			
+			server.dissconnectClients();
 			
 			lblServerAddress.setText("Dissconected");
 			
@@ -506,11 +512,9 @@ public class Server extends JFrame implements Runnable {
 	}
 	
 	public synchronized void updateOnlineUsers() {
-        if(clientCount == 0) {
-        	onlineUsers.setText("");
-        } else {
+       	onlineUsers.setText("");
+        if(clientCount != 0) {
 			for (int i = 0; i < clientCount; i++) {
-	        	onlineUsers.setText("");
 	            onlineUsers.append(clients[i].getID()+"\n");
 	        }
         }
@@ -553,17 +557,26 @@ public class Server extends JFrame implements Runnable {
 	        }
 	    }
 	}
+	
+	public synchronized void dissconnectClients() throws IOException {
+		for (int i = 0; i < clientCount; i++) {
+    		clients[i].close();
+    		clients[i].interrupt();
+		}
+			
+	} 
 
 	@Override
 	public void run() {
-		while (true) {  
-			try { 
-				System.out.println("Waiting for a client ..."); 
-				addThread(msgServerSocket.accept()); 
-			} catch(IOException ioe) {  
-	        	System.out.println("Server accept error: " + ioe);
-	        	stop(); 
-	        }
+		while (true) {
+			if (serverOnline)
+				try { 
+					System.out.println("Waiting for a client ..."); 
+					addThread(msgServerSocket.accept()); 
+				} catch(IOException ioe) {  
+		        	System.out.println("Server accept error: " + ioe);
+		        	stop(); 
+		        }
 	    }		
 	}
 }
