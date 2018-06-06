@@ -39,6 +39,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 
 import java.awt.Font;
 
@@ -72,7 +73,7 @@ public class Client extends JFrame {
 	static int vlera_pritur;
 	private JTextField txt_vlera_pritur;
 	private JScrollPane scrollPane;
-	final static String serverAddress = "192.168.43.59";
+	final static String serverAddress = "localhost";
 	
 	/**
 	 * Launch the application.
@@ -105,6 +106,7 @@ public class Client extends JFrame {
 					
 							msgin=dis.readUTF();
 							msg_text.append(msgin);
+							msg_text.setCaretPosition(msg_text.getDocument().getLength());    
 						} catch (IOException e) {
 							e.printStackTrace();
 							System.exit(0);
@@ -169,7 +171,7 @@ public class Client extends JFrame {
 								directory = new File("audio/client");
 								
 								if (!directory.exists())
-									directory.mkdir();
+									directory.mkdirs();
 								
 								audioFile = new File("audio/client/audio.wav");
 								
@@ -294,7 +296,7 @@ public class Client extends JFrame {
 	 * Create the frame.
 	 */
 	public Client() {
-		conn=MySqlConnector.connectFiekDb();
+		conn=MySqlConnector.connectFiekDb(serverAddress);
 		setResizable(false);
 		setTitle("Client");
 		try {
@@ -429,7 +431,13 @@ public class Client extends JFrame {
 							else if (i < 21) {
 								btnRecord.setText("00:"+ i);
 							} else {
-								btnRecord.setForeground(Color.RED);
+								SwingUtilities.invokeLater(new Runnable() {
+									
+									@Override
+									public void run() {
+										btnRecord.setForeground(Color.RED);
+									}
+								});
 								targetDataLine.stop();
 							}
 							
@@ -570,70 +578,97 @@ public class Client extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				if(!txt_vlera_pritur.getText().toString().equals("")) { 
 					if(StringUtils.isStrictlyNumeric(txt_vlera_pritur.getText().toString())) {
-						if(Integer.valueOf(txt_vlera_pritur.getText()) > 1 && Integer.valueOf(txt_vlera_pritur.getText()) < 12 ) {
+						if(Integer.valueOf(txt_vlera_pritur.getText()) >= 1 && Integer.valueOf(txt_vlera_pritur.getText()) <= 12 ) {
 							
 							vlera=txt_vlera_pritur.getText();
 							vlera_pritur=Integer.parseInt(vlera);
 							
+							btn_Roll_Dice1.setEnabled(false);
 							
-							dice1 = roll(lblRoll1);
-							dice2 = roll(lblRoll2);
+							Thread shuffle = new Thread(new Runnable() {
+								
+								@Override
+								public void run() {
+									for(int i = 1; i < 12; i++) {
+										SwingUtilities.invokeLater(new Runnable() {
+											@Override
+											public void run() {
+												dice1 = roll(lblRoll1);
+												dice2 = roll(lblRoll2);
+											}
+										});
+										try {
+											Thread.sleep(300);
+										} catch (InterruptedException e) {
+											// TODO Auto-generated catch block
+											e.printStackTrace();
+										}
+									}
+									
+									try {
+										Thread.sleep(700);
+									} catch (InterruptedException e1) {
+										// TODO Auto-generated catch block
+										e1.printStackTrace();
+									}
+									
+									if(vlera_pritur==(dice1+dice2)){
+										
+										try 
+										{
+											String sql="insert into dice (dice1,dice2,diceSum,vlera_pritur,won,price) values (?,?,?,?,?,?)";
+											pst=conn.prepareStatement(sql);
+											
+											pst.setInt (1, dice1);
+											pst.setInt (2, dice2) ;
+											pst.setInt(3, dice1+dice2);
+											pst.setInt(4, vlera_pritur);
+											pst.setBoolean(5, true);
+											pst.setString(6, "1000");
+											pst.execute();
+											pst.close();
+										} 
+										catch (SQLException e5) 
+										{
+											JOptionPane.showMessageDialog(null, "Error:"+e5.getMessage());
+										} 
+										JOptionPane.showMessageDialog(null, "Urime keni fituar 1000euro\n"+"Shuma = "+(dice1+dice2)+"\nVlera e pritur = "+vlera_pritur);
+										lblRoll1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-1.png")));
+										lblRoll2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-1.png")));
+										txt_vlera_pritur.setText("");
+									} else {
+										try {
+											String sql="insert into dice (dice1,dice2,diceSum,vlera_pritur,won,price) values (?,?,?,?,?,?)";
+											pst=conn.prepareStatement(sql);
+											
+											pst.setInt (1, dice1);
+											pst.setInt (2, dice2) ;
+											pst.setInt(3, dice1+dice2);
+											pst.setInt(4, vlera_pritur);
+											pst.setBoolean(5, false);
+											pst.setString(6, "1000");
+											pst.execute();
+											pst.close();
+											
+										} 
+										catch (SQLException e5) 
+										{
+											JOptionPane.showMessageDialog(null, "Error:"+e5.getMessage());
+										} 
+										JOptionPane.showMessageDialog(null,"Na vjen keq, vlera e pritur nuk perputhet me shumen e rene.\nShuma = "+(dice1+dice2)+ 
+												" \n Vlera e pritur = "+vlera_pritur + " \n"+
+												"Provoni perseri.");
+
+										lblRoll1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-1.png")));
+										lblRoll2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/dice-rolling-1.png")));
+										txt_vlera_pritur.setText("");										
+									}
+									btn_Roll_Dice1.setEnabled(true);
+								}
+							});
 							
+							shuffle.start();
 							
-							if(vlera_pritur==(dice1+dice2)){
-								
-								try 
-								{
-									String sql="insert into dice (dice1,dice2,diceSum,won,price) values (?,?,?,?,?)";
-									pst=conn.prepareStatement(sql);
-									
-									pst.setInt (1, dice1);
-									pst.setInt (2, dice2) ;
-									pst.setInt(3, dice1+dice2);
-									pst.setBoolean(4, true);
-									pst.setString(5, "1000");
-									pst.execute();
-									pst.close();
-									
-								} 
-								catch (SQLException e5) 
-								{
-									JOptionPane.showMessageDialog(null, "Error:"+e5.getMessage());
-								} 
-								JOptionPane.showMessageDialog(null, "Urime keni fituar 1000euro\n"+"Shuma = "+(dice1+dice2)+"\nVlera e pritur = "+vlera_pritur);
-								
-								txt_vlera_pritur.setText("");
-								lblRoll1.setIcon(new javax.swing.ImageIcon(getClass().getResource("")));
-								lblRoll2.setIcon(new javax.swing.ImageIcon(getClass().getResource("")));
-							}
-							else {
-								
-								try 
-								{
-									String sql="insert into dice (dice1,dice2,diceSum,won,price) values (?,?,?,?,?)";
-									pst=conn.prepareStatement(sql);
-									
-									pst.setInt (1, dice1);
-									pst.setInt (2, dice2) ;
-									pst.setInt(3, dice1+dice2);
-									pst.setBoolean(4, false);
-									pst.setString(5, "0");
-									pst.execute();
-									pst.close();
-									
-								} 
-								catch (SQLException e5) 
-								{
-									JOptionPane.showMessageDialog(null, "Error:"+e5.getMessage());
-								} 
-								JOptionPane.showMessageDialog(null,"Na vjen keq, vlera e pritur nuk perputhet me shumen e rene.\nShuma = "+(dice1+dice2)+ 
-										" \n Vlera e pritur = "+vlera_pritur + " \n"+
-										"Provoni perseri.");
-								txt_vlera_pritur.setText("");
-								lblRoll1.setIcon(new javax.swing.ImageIcon(getClass().getResource("")));
-								lblRoll2.setIcon(new javax.swing.ImageIcon(getClass().getResource("")));
-								
-							}
 						} else {
 							lblValidate.setText("Vlera e pritur duhet te jete ne mes numrave 1 dhe 12");
 						}

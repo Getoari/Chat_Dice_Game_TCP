@@ -10,13 +10,13 @@ public class MySqlConnector {
  Connection conn = null;
 
 
-	public static Connection connectFiekDb()
+	public static Connection connectFiekDb(String server)
 	{
 		try
 		{
 			//perdoret per marrjen e Driverit per lidhje
 			Class.forName("com.mysql.jdbc.Driver");
-			Connection conn=DriverManager.getConnection("jdbc:mysql://localhost:3306/dbSisteme?&autoReconnect=true&useSSL=false","root","toor");
+			Connection conn=DriverManager.getConnection("jdbc:mysql://"+server+":3306/dbSisteme?&autoReconnect=true&useSSL=false","root","toor");
 			return conn;
 		}
 		catch (Exception se)

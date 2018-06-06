@@ -1,6 +1,10 @@
 package Projekti;
 
 import java.net.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.io.*;
 import java.awt.Color;
 import java.awt.EventQueue;
@@ -8,6 +12,9 @@ import java.awt.EventQueue;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
+
+import net.proteanit.sql.DbUtils;
+
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.sound.sampled.AudioFileFormat;
@@ -32,6 +39,7 @@ import javax.swing.ImageIcon;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.JScrollPane;
 
 public class Server extends JFrame implements Runnable {
@@ -67,6 +75,10 @@ public class Server extends JFrame implements Runnable {
 	static Server server = null;
 	private JScrollPane scrollPane;
 	static Thread serverStarter;
+	static Connection conn=null;
+	static PreparedStatement pst=null;
+	static ResultSet rs=null;
+	static JButton btnRezultatet;
 	
 	/**
 	 * Launch the application.
@@ -142,7 +154,7 @@ public class Server extends JFrame implements Runnable {
 						        directory = new File("audio/server");
 						        
 						        if (!directory.exists())
-						        	directory.mkdir();
+						        	directory.mkdirs();
 						        
 						        audioFile = new File("audio/server/audio.wav");
 						        
@@ -182,6 +194,7 @@ public class Server extends JFrame implements Runnable {
 	 * Create the frame.
 	 */
 	public Server() {
+		conn=MySqlConnector.connectFiekDb("localhost");
 		setResizable(false);
 		setTitle("Server");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -296,7 +309,12 @@ public class Server extends JFrame implements Runnable {
 							else if (i < 21) {
 								btnRecord.setText("00:"+ i);
 							} else {
-								btnRecord.setForeground(Color.RED);
+								SwingUtilities.invokeLater(new Runnable() {
+									@Override
+									public void run() {
+										btnRecord.setForeground(Color.RED);
+									}
+								});
 								targetDataLine.stop();
 							}
 							
@@ -420,6 +438,10 @@ public class Server extends JFrame implements Runnable {
 		lblServerAddress.setFont(new Font("Tahoma", Font.PLAIN, 12));
 		lblServerAddress.setBounds(47, 30, 115, 22);
 		contentPane.add(lblServerAddress);
+		
+		btnRezultatet = new JButton("Shfaq Rezultatet");
+		btnRezultatet.setBounds(427, 305, 178, 53);
+		contentPane.add(btnRezultatet);
 	}
 	
 	public Server(int port) {  
@@ -443,7 +465,16 @@ public class Server extends JFrame implements Runnable {
         }
     }
 
-	public static void connect(){
+	public synchronized static void connect(){
+		
+		btnRezultatet.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				frmRezultatet frmRez=new frmRezultatet();
+				frmRez.setBounds(200, 200, 780, 480);
+				frmRez.setVisible(true);	
+			}
+		});
+		
 		try {
 			if(!serverOnline) {				
 				serverStarter = new Thread(new Runnable() {
@@ -455,6 +486,10 @@ public class Server extends JFrame implements Runnable {
 				});
 				
 				serverStarter.start();
+				
+				if(msgServerSocket.isClosed()) {
+					msgServerSocket = new ServerSocket(8888);
+				}
 				
 				lblServerAddress.setText("Connected");
 				
@@ -474,11 +509,12 @@ public class Server extends JFrame implements Runnable {
 		
 		
 	}
-	public static void disconnect() {
+	public synchronized static void disconnect() {
 		try {
 			server.stop();
 			serverStarter.interrupt();
 			
+			msgServerSocket.close();
 			voiceServerSS.close();
 			voiceServerRS.close();
 			
@@ -518,7 +554,7 @@ public class Server extends JFrame implements Runnable {
 	            clients[i].send(id + ": " + input);
 	        }
 	    }
-	         
+		msg_text.setCaretPosition(msg_text.getDocument().getLength());    
 	}
 	
 	public synchronized void updateOnlineUsers() {
@@ -589,4 +625,20 @@ public class Server extends JFrame implements Runnable {
 		        }
 	    }		
 	}
+	
+	public void updateTable(){
+		
+		try {
+				String sql="select id as 'ID',dice1 as 'Dice1',dice2 as 'Dice2', diceSum as 'Shuma', vlera_pritur as 'Vlera_pritur',won as 'Fituar',price as' Shperblimi' from dice";
+				pst=conn.prepareStatement(sql);
+				rs=pst.executeQuery();
+				
+				pst.close();
+		}
+		catch (SQLException e){
+		System.out.println("Error :"+e.getMessage());
+			
+		}
+				
+	}	
 }
